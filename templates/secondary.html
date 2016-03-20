@@ -1,0 +1,60 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Flask-SocketIO Test</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='Cesium/Cesium.js') }}"></script>
+
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='Cesium/Widgets/widgets.css') }}">
+
+    <script type="text/javascript" charset="utf-8">
+        $(document).ready(function(){
+            namespace = '/test';
+
+            // the socket.io documentation recommends sending an explicit package upon connection
+            // this is specially important when using the global namespace
+            var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+            var viewer = null;
+
+            socket.on('secondary move', function(msg) {
+                if (viewer === null) {
+                    viewer = new Cesium.Viewer('cesiumContainer', {
+                        scene3DOnly: true,
+                        infoBox : false,
+                        selectionIndicator : false,
+                    });
+                }
+                store = msg.data;
+                viewer.scene.camera.position = store.position
+                viewer.scene.camera.direction = store.direction
+                viewer.scene.camera.up = store.up
+                viewer.scene.camera.right = store.right
+                // viewer.scene.camera.flyTo({
+                //     destination: store.position,
+                //     orientation: {
+                //         direction: store.direction,
+                //         up: store.up,
+                //         right: store.right
+                //     }
+                // });
+            });
+
+            $('form#master_name').submit(function(event) {
+                socket.emit('secondary connected', {primary_name: $('#name_data').val()});
+                return false;
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Secondary</h1>
+    <form id="master_name" method="POST" action='#'>
+        <input type="text" name="name_data" id="name_data" placeholder="Paste master name">
+        <input type="submit" value="Connect">
+    </form>
+
+    <div id="cesiumContainer"></div>
+    <div id="toolbar"></div>
+</body>
+</html>

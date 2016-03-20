@@ -1,0 +1,59 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Flask-SocketIO Test</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='Cesium/Cesium.js') }}"></script>
+
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='Cesium/Widgets/widgets.css') }}">
+
+    <script type="text/javascript" charset="utf-8">
+        var viewer = null;
+        var FPS = 120.0;
+        var prevCamera = null;
+        $(document).ready(function(){
+            namespace = '/test';
+            var primary_name = "{{ primary_name }}";
+
+            // the socket.io documentation recommends sending an explicit package upon connection
+            // this is specially important when using the global namespace
+            var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+
+            socket.on('connect', function() {
+                socket.emit('primary connected', {primary_name: primary_name});
+                viewer = new Cesium.Viewer('cesiumContainer', {
+                    scene3DOnly: true,
+                    infoBox : false,
+                    selectionIndicator : false,
+                });
+                viewer.scene.preRender.addEventListener(function(){
+                    var camera = viewer.scene.camera; 
+                    if (prevCamera === null || !(camera.position.equals(prevCamera.position) && camera.direction.equals(prevCamera.direction) && 
+                        camera.up.equals(prevCamera.up) && camera.right.equals(prevCamera.right))) {
+
+                        // console.log(store);
+                        prevCamera = {  
+                            position: camera.position.clone(),
+                            direction: camera.direction.clone(),
+                            up: camera.up.clone(),
+                            right: camera.right.clone()
+                        };
+                        socket.emit('primary change', {primary_name: primary_name, data: prevCamera});
+                    }
+
+                });
+
+            });
+            socket.on('primary send', function(msg) {
+                socket.emit('primary change', {primary_name: primary_name, data: prevCamera});
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Primary {{ primary_name }}</h1>
+    <div id="cesiumContainer"></div>
+    <div id="toolbar"></div>
+</body>
+</html>
